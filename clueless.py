@@ -91,7 +91,7 @@ def initialize_game():
 
 
 # Function sends message to specified player(piece)
-def send_message(message, piece):
+def send_message(message, piece, character_assignments, players):
     # message needs to be a string
     id = character_assignments[piece.character]
     conn = players[id]
@@ -99,7 +99,7 @@ def send_message(message, piece):
     conn.send(data.encode())
 
 # Function waits for and retrieves a message from the player associated with piece
-def receive_message(piece):
+def receive_message(piece, character_assignments, players):
     id = character_assignments[piece.character]
     conn = players[id]
     data = conn.recv(1024).decode()
@@ -110,29 +110,29 @@ def receive_message(piece):
     return data
 
 # Function handles player's turn
-def handle_turn(game, piece, game_over, winner): 
+def handle_turn(game, piece, character_assignments, players, game_over, winner): 
     # request move from player 
     # can use function send_message
 
-    turn = receive_message(piece)
+    turn = receive_message(piece, character_assignments, players)
 
     # parse turn
 
     if piece moved spaces:
-        update its location 
+        piece.position = new location in string format. make sure format matches a location in components.py 
         send update to all players
 
     if move was a suggestion:
-        handle_suggestion(game, suggestion, piece)
+        handle_suggestion(suggestion, game, piece, character_assignments, players)
 
     elif move was an accusation:
-        handle_accusation(game, accusation, piece, game_over, winner)
+        handle_accusation(accusation, game, piece, character_assignments, players, game_over, winner)
 
     piece.was_just_moved_by_suggestn = 0
 
 
 # Function handles suggestions
-def handle_suggestion(game, suggestion, piece):
+def handle_suggestion(suggestion, game, piece, character_assignments, players):
     who = suggestion[0]
     room = suggestion[1]
     weapon = suggestion[2]
@@ -152,7 +152,7 @@ def handle_suggestion(game, suggestion, piece):
         tell player who disproved their suggestion and with what card. tell everyone else who made the suggestion, what it was, and who disproved it
 
 # Function handles accusations
-def handle_accusation(game, accusation, piece, game_over, winner):
+def handle_accusation(accusation, game, piece, character_assignments, players, game_over, winner)
     # if accusation was wrong:
     if set(game.answer) != set(accusation):
         piece.has_guessed = 1
@@ -164,7 +164,7 @@ def handle_accusation(game, accusation, piece, game_over, winner):
         winner = piece.character 
 
 # Function ends the game
-def end_game(game, winner):
+def end_game(winner, game, character_assignments, players):
     tell all players who won the game and what the correct accusation was
     end game (what should players see on their screens?)
 
@@ -179,7 +179,11 @@ if __name__ == '__main__':
             # skip pieces not in play or who have made a wrong accusation
             if piece.is_in_play==0 or piece.has_guessed==1:
                 continue
-            handle_turn(game, piece, game_over, winner)
-    end_game(game, winner)
-    close all connections. if socket object is called conn, call conn.close() 
+            handle_turn(game, piece, character_assignments, players, game_over, winner)
+    end_game(winner, game, character_assignments, players)
+    #close all connections
+    for id in players:
+        conn = players[id]
+        conn.close()
+
 
