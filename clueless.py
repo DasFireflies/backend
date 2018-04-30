@@ -11,8 +11,9 @@ def initialize_game():
     #****need to implement threading to handle multiple players****
 
     used_characters = []
-    character_choices = {} #dict of (connection address, character choice) pairs
-    players = {} #dict of (connection address, socket object) pairs
+    players_whove_selected = []
+    character_assignments = {} #dict of (character, player id) pairs
+    players = {} #dict of (player id, socket object) pairs
     num_players = 0
     game_started = 0
     # Set up connection
@@ -22,12 +23,13 @@ def initialize_game():
     mySocket.bind((host,port))
     mySocket.listen(1)
     conn, addr = mySocket.accept()
-    print ("Connection from: " + str(addr))
-    players[addr] = conn
+    id = addr[1]
+    print ("Connection from: " + str(addr)+ ". User's id will be " + str(id))
+    players[id] = conn
     # Process input from player until someone presses "Start Game"
     while game_started == 0:
         data = conn.recv(1024).decode()
-        print ("data received: " + str(data) + " from player with connection address " + str(addr))
+        print ("data received: " + str(data) + " from player with id " + str(id))
         # data should either be an integer 0-5 indicating character selection/deselection or -1 indicating "start game"
         if data == '':
             continue
@@ -36,9 +38,10 @@ def initialize_game():
             game_started = 1
 
         # If player has already chosen their character, unassign it
-        elif addr in character_choices:
-            used_characters.remove(character_choices[addr])
-            character_choices.pop(addr)
+        elif id in players_whove_selected:
+            used_characters.remove(data)
+            players_whove_selected.remove(id)
+            character_assignments.pop(data)
             num_players = num_players-1
             print("Sending confirmation of deselection  back to player")
             data = "1\r\n"
@@ -48,8 +51,9 @@ def initialize_game():
         elif data not in used_characters:
             print("Assigning them that character...\n")
             used_characters.append(data)
+            players_whove_selected.append(id)
             print("character marked as used.\n")
-            character_choices[addr] = data
+            character_assignments[data] = id
             print("player and character are paired\n")
             num_players = num_players+1
             print("player count increased\n")
@@ -67,20 +71,37 @@ def initialize_game():
 
     game = Game(num_players, used_characters)
 
+    # convert keys in character_assignments to strings 
+    for key in character_assignments:
+        if key == 0:
+            character_assignments['mr_green'] = character_assignments.pop(0)
+        elif key == 1:
+            character_assignments['mrs_peacock'] = character_assignments.pop(1)
+        elif key == 2:
+            character_assignments['mrs_white'] = character_assignments.pop(2)
+        elif key == 3:
+            character_assignments['miss_scarlet'] = character_assignments.pop(3)    
+        elif key == 4:
+            character_assignments['professor_plum'] = character_assignments.pop(4)
+        elif key == 5:
+            character_assignments['colonel_mustard'] = character_assignments.pop(5)
+
     # can game just be passed like this? would it be better to create it in the main function?
-    return game, character_choices, players
+    return game, character_assignments, players
 
 
 # Function sends message to specified player(piece)
 def send_message(message, piece):
     # message needs to be a string
-    set conn to be the name of the socket object which is used to talked to the player assocaited with piece
+    id = character_assignments[piece.character]
+    conn = players[id]
     data = message+"\r\n"
     conn.send(data.encode())
 
 # Function waits for and retrieves a message from the player associated with piece
 def receive_message(piece):
-    set conn to be the name of the socket object which is used to talked to the player assocaited with piece
+    id = character_assignments[piece.character]
+    conn = players[id]
     data = conn.recv(1024).decode()
     if data == '':
         time.sleep(.5)
@@ -150,7 +171,7 @@ def end_game(game, winner):
 
 
 if __name__ == '__main__':
-    game, character_choices, players  = initialize_game()
+    game, character_assignments, players  = initialize_game()
     game_over = 0
     winner = ""
     while game_over == 0:
