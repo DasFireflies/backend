@@ -130,6 +130,14 @@ def handle_turn(game, piece, character_assignments, players, game_over, winner):
 
     piece.was_just_moved_by_suggestn = 0
 
+# Function returns index of piece with specified character
+def get_piece(game, character):
+	for i in range(6):
+		piece = game.pieces[i]
+		if piece.character == character:
+			return i
+	return -1
+
 
 # Function handles suggestions
 def handle_suggestion(suggestion, game, piece, character_assignments, players):
@@ -137,9 +145,11 @@ def handle_suggestion(suggestion, game, piece, character_assignments, players):
     room = suggestion[1]
     weapon = suggestion[2]
 
-    if character who was suggested is not already in the room:
-        update their location to that room
-        change that pieces was_just_moved_by_suggestn attribute to equal 1
+    who_piece = game.pieces[get_piece(game, who)] 
+
+    if who_piece.position != room:
+        who_piece.position = room
+        who_piece.was_just_moved_by_suggestn = 1
         send update to all players that that character was moved by a suggestion
     was_disproved = 0
     player_who_disproved = -1
