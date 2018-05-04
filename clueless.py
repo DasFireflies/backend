@@ -1,31 +1,19 @@
 import socket
 import sys
 import time
+from threading import Thread
 from components import Game, Piece
 
-# Function handles game initialization
-# Accepts character selections and creates the playing pieces and game object
-def initialize_game():
+used_characters = []
+players_whove_selected = []
+character_assignments = {} #dict of (character, player id) pairs
+game_started = 0
+num_players = 0
 
-    #****right now this only handles single player****
-    #****need to implement threading to handle multiple players****
-
-    used_characters = []
-    players_whove_selected = []
-    character_assignments = {} #dict of (character, player id) pairs
-    players = {} #dict of (player id, socket object) pairs
-    num_players = 0
-    game_started = 0
-    # Set up connection
-    host = "172.31.27.46"
-    port = 5000
-    mySocket = socket.socket()
-    mySocket.bind((host,port))
-    mySocket.listen(1)
-    conn, addr = mySocket.accept()
-    id = addr[1]
-    print ("Connection from: " + str(addr)+ ". User's id will be " + str(id))
-    players[id] = conn
+# Function handles game initialization for a single player
+def initialize_player(id, players):
+    global used_characters, players_whove_selected, character_assignments, game_started, num_players
+    conn  = players[id]
     # Process input from player until someone presses "Start Game"
     while game_started == 0:
         data = conn.recv(1024).decode()
@@ -68,6 +56,37 @@ def initialize_game():
             conn.send(data.encode())
 
         time.sleep(.5)
+
+# Function handles game initialization
+# Accepts character selections and creates the playing pieces and game object
+def initialize_game():
+   
+    global used_characters, players_whove_selected, character_assignments, game_started, num_players
+    used_characters = []
+    players_whove_selected = []
+    character_assignments = {} #dict of (character, player id) pairs
+    game_started = 0
+    num_players = 0
+
+    players = {} #dict of (player id, socket object) pairs
+    
+    # Set up connection
+    host = "192.168.1.175" #"172.31.27.46"
+    port = 5000
+    mySocket = socket.socket()
+    mySocket.bind((host,port))
+    mySocket.listen(1)
+    mySocket.settimeout(2)
+    while game_started == 0:
+        try:
+            conn, addr = mySocket.accept()      
+            id = addr[1]
+            print ("Connection from: " + str(addr)+ ". User's id will be " + str(id))
+            players[id] = conn
+            Thread(target=initialize_player, args=(id, players)).start()
+        except Exception as e:
+            continue
+    
 
     game = Game(num_players, used_characters)
 
