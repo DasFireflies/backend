@@ -10,6 +10,13 @@ character_assignments = {} #dict of (character, player id) pairs
 game_started = 0
 num_players = 0
 
+# Function sends client the game state upon request
+# Function runs as a separate thread
+def send_status(player, players):
+    conn = players[player]
+    listen for request over socket conn
+    send game state
+
 # Function handles game initialization for a single player
 def initialize_player(id, players):
     global used_characters, players_whove_selected, character_assignments, game_started, num_players
@@ -155,6 +162,7 @@ def get_piece(game, character):
 		piece = game.pieces[i]
 		if piece.character == character:
 			return i
+    print("ERROR: PIECE NOT FOUND. CHARACTER: "+character)
 	return -1
 
 
@@ -197,12 +205,12 @@ def end_game(winner, game, character_assignments, players):
     tell all players who won the game and what the correct accusation was
     end game (what should players see on their screens?)
 
-
-
 if __name__ == '__main__':
     game, character_assignments, players  = initialize_game()
     game_over = 0
     winner = ""
+    for player in players:
+        Thread(target=send_status, args=(player, players)).start()
     while game_over == 0:
         for piece in game.pieces: # pieces are already in order of play
             # skip pieces not in play or who have made a wrong accusation
