@@ -14,8 +14,8 @@ num_players = 0
 # Function runs as a separate thread
 def send_status(player, players):
     conn = players[player]
-    listen for request over socket conn
-    send game state
+    ##### what data should be sent? should client request a specific piece of data?
+
 
 # Function handles game initialization for a single player
 def initialize_player(id, players):
@@ -67,7 +67,6 @@ def initialize_player(id, players):
 # Function handles game initialization
 # Accepts character selections and creates the playing pieces and game object
 def initialize_game():
-   
     global used_characters, players_whove_selected, character_assignments, game_started, num_players
     used_characters = []
     players_whove_selected = []
@@ -78,7 +77,7 @@ def initialize_game():
     players = {} #dict of (player id, socket object) pairs
     
     # Set up connection
-    host = "192.168.1.175" #"172.31.27.46"
+    host = "172.31.27.46"
     port = 5000
     mySocket = socket.socket()
     mySocket.bind((host,port))
@@ -94,7 +93,6 @@ def initialize_game():
         except Exception as e:
             continue
     
-
     game = Game(num_players, used_characters)
 
     # convert keys in character_assignments to strings 
@@ -124,6 +122,13 @@ def send_message(message, piece, character_assignments, players):
     data = message+"\r\n"
     conn.send(data.encode())
 
+# Function sends message to all players(pieces)
+def broadcast_message(message, players):
+    # message needs to be a string
+    data = message+"\r\n"
+    for id, conn in players.items():
+        conn.send(data.encode())
+
 # Function waits for and retrieves a message from the player associated with piece
 def receive_message(piece, character_assignments, players):
     id = character_assignments[piece.character]
@@ -138,21 +143,21 @@ def receive_message(piece, character_assignments, players):
 # Function handles player's turn
 def handle_turn(game, piece, character_assignments, players, game_over, winner): 
     # request move from player 
-    # can use function send_message
-
+    send_message("5", piece, character_assignments, players)
     turn = receive_message(piece, character_assignments, players)
 
-    # parse turn
-
-    if piece moved spaces:
-        piece.position = new location in string format. make sure format matches a location in components.py 
-        send update to all players
-
-    if move was a suggestion:
-        handle_suggestion(suggestion, game, piece, character_assignments, players)
-
-    elif move was an accusation:
-        handle_accusation(accusation, game, piece, character_assignments, players, game_over, winner)
+    while turn != "-1": # while move is not over
+        move = turn.split(',')
+        if move[0] == '2': # if player moved locations
+            piece.position = move[1] # make sure format matches that in components.py
+            broadcast_message("2,"+piece.character+","+move[1]) 
+        elif move[0] == '3': # if move was a suggestion
+            suggestion = move[1:]
+            handle_suggestion(suggestion, game, piece, character_assignments, players)
+        elif move[0] == '4':
+            accusation = move[1:]            
+            handle_accusation(accusation, game, piece, character_assignments, players, game_over, winner)
+        turn = receive_message(piece, character_assignments, players)
 
     piece.was_just_moved_by_suggestn = 0
 
@@ -165,7 +170,6 @@ def get_piece(game, character):
     print("ERROR: PIECE NOT FOUND. CHARACTER: "+character)
 	return -1
 
-
 # Function handles suggestions
 def handle_suggestion(suggestion, game, piece, character_assignments, players):
     who = suggestion[0]
@@ -177,33 +181,30 @@ def handle_suggestion(suggestion, game, piece, character_assignments, players):
     if who_piece.position != room:
         who_piece.position = room
         who_piece.was_just_moved_by_suggestn = 1
-        send update to all players that that character was moved by a suggestion
+        broadcast_message("22,"+who+","+room)
     was_disproved = 0
     player_who_disproved = -1
     card_used_to_disprove = ""
-    loop through players, starting at whoevers turn should be next and going in order of turns
-        if that player can disprove the suggestion, change values of above 3 variables and break
+    #loop through players, starting at whoevers turn should be next and going in order of turns
+        #if that player can disprove the suggestion, change values of above 3 variables and break
+    #change player_who_disproved to be the character name
     if was_disproved == 0:
-        send everyone updates of who made the suggestion, what the suggestion was, and that it couldnt be disproved
+        broadcast_message("3,"+piece.character+","+who+","+room+","+weapon+"null")
     else:
-        tell player who disproved their suggestion and with what card. tell everyone else who made the suggestion, what it was, and who disproved it
+        broadcast_message("3,"+piece.character+","+who+","+room+","+weapon+player_who_disproved)
 
 # Function handles accusations
 def handle_accusation(accusation, game, piece, character_assignments, players, game_over, winner)
     # if accusation was wrong:
     if set(game.answer) != set(accusation):
         piece.has_guessed = 1
-        send updates to everyone that this player made an incorrect accusation
+        broadcast_message("4,"+piece.character+",0") 
 
     # if accusation was correct:
     else: 
         game_over == 1
         winner = piece.character 
-
-# Function ends the game
-def end_game(winner, game, character_assignments, players):
-    tell all players who won the game and what the correct accusation was
-    end game (what should players see on their screens?)
+        broadcast_message("4,"+piece.character+",1")
 
 if __name__ == '__main__':
     game, character_assignments, players  = initialize_game()
@@ -217,7 +218,6 @@ if __name__ == '__main__':
             if piece.is_in_play==0 or piece.has_guessed==1:
                 continue
             handle_turn(game, piece, character_assignments, players, game_over, winner)
-    end_game(winner, game, character_assignments, players)
     #close all connections
     for id in players:
         conn = players[id]
