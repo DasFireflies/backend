@@ -10,14 +10,6 @@ character_assignments = {} #dict of (character, player id) pairs
 game_started = 0
 num_players = 0
 
-# Function sends client the game state upon request
-# Function runs as a separate thread
-def send_status(player, players):
-    conn = players[player]
-    ##### what data will the client need?
-    ##### how to do this on the same socket as requesting moves/sending moves/sending updates without mixing up the messages?
-
-
 # Function handles game initialization for a single player
 def initialize_player(id, players):
     global used_characters, players_whove_selected, character_assignments, game_started, num_players
@@ -111,9 +103,21 @@ def initialize_game():
         elif key == 5:
             character_assignments['colonel_mustard'] = character_assignments.pop(5)
 
+    # send clients their cards and who got how many cards
+    cards_dealt = str(num_players)+','
+    for piece in game.pieces:
+        if piece.cards != []:
+            cards_dealt = cards_dealt + ',' + str(len(piece.cards))
+    for character in character_assignments:
+        piece_index = get_piece(game, character)
+        piece = game.pieces[piece_index]
+        num_cards = str(len(piece.cards))
+        deck = ','.join(piece.cards)
+        message = cards_dealt + ',' + num_cards + ',' + deck
+        send_message(message, piece, character_assignments, players)
+
     # can game just be passed like this? would it be better to create it in the main function?
     return game, character_assignments, players
-
 
 # Function sends message to specified player(piece)
 def send_message(message, piece, character_assignments, players):
@@ -144,7 +148,7 @@ def receive_message(piece, character_assignments, players):
 # Function handles player's turn
 def handle_turn(game, piece, character_assignments, players, game_over, winner): 
     # request move from player 
-    send_message("5", piece, character_assignments, players)
+    send_message("5,"+str(piece.was_just_moved_by_suggestn)+','+piece.position, piece, character_assignments, players)
     turn = receive_message(piece, character_assignments, players)
 
     while turn != "-1": # while move is not over
@@ -217,7 +221,6 @@ def handle_accusation(accusation, game, piece, character_assignments, players, g
     if set(game.answer) != set(accusation):
         piece.has_guessed = 1
         broadcast_message("4,"+piece.character+",0") 
-
     # if accusation was correct:
     else: 
         game_over == 1
@@ -228,8 +231,6 @@ if __name__ == '__main__':
     game, character_assignments, players  = initialize_game()
     game_over = 0
     winner = ""
-    for player in players:
-        Thread(target=send_status, args=(player, players)).start()
     while game_over == 0:
         for piece in game.pieces: # pieces are already in order of play
             # skip pieces not in play or who have made a wrong accusation
