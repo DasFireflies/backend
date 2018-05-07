@@ -1,34 +1,245 @@
+import socket
+import sys
+import time
+from threading import Thread
 from components import Game, Piece
 
-#handlers?
+used_characters = []
+players_whove_selected = []
+character_assignments = {} #dict of (character, player id) pairs
+game_started = 0
+num_players = 0
 
-# Function sends updates to all players
-def update_players():
-    #send update to all players so that 
-    #their board updates and
-    #their activity log updates
+# Function handles game initialization for a single player
+def initialize_player(id, players):
+    global used_characters, players_whove_selected, character_assignments, game_started, num_players
+    conn  = players[id]
+    # Process input from player until someone presses "Start Game"
+    while game_started == 0:
+        data = conn.recv(1024).decode()
+        print ("data received: " + str(data) + " from player with id " + str(id))
+        # data should either be an integer 0-5 indicating character selection/deselection or -1 indicating "start game"
+        if data == '':
+            continue
+
+        elif data == '-1': # If player pressed "Start Game"
+            game_started = 1
+
+        # If player has already chosen their character, unassign it
+        elif id in players_whove_selected:
+            used_characters.remove(data)
+            players_whove_selected.remove(id)
+            character_assignments.pop(data)
+            num_players = num_players-1
+            print("Sending confirmation of deselection  back to player")
+            data = "1\r\n"
+            conn.send(data.encode())
+        # If player hasnt chosen character yet and character is unused,
+        # assign them that character
+        elif data not in used_characters:
+            print("Assigning them that character...\n")
+            used_characters.append(data)
+            players_whove_selected.append(id)
+            print("character marked as used.\n")
+            character_assignments[data] = id
+            print("player and character are paired\n")
+            num_players = num_players+1
+            print("player count increased\n")
+            print("Sending 1 back to player")
+            data = "1\r\n"
+            conn.send(data.encode())
+            print("data sent")
+        # If character is used, don't assign it
+        elif data in used_characters:
+            print("Sending 0 back to player because character has been taken")
+            data = "0\r\n"
+            conn.send(data.encode())
+
+        time.sleep(.5)
+
+# Function handles game initialization
+# Accepts character selections and creates the playing pieces and game object
+def initialize_game():
+    global used_characters, players_whove_selected, character_assignments, game_started, num_players
+    used_characters = []
+    players_whove_selected = []
+    character_assignments = {} #dict of (character, player id) pairs
+    game_started = 0
+    num_players = 0
+
+    players = {} #dict of (player id, socket object) pairs
+    
+    # Set up connection
+    host = "172.31.27.46"
+    port = 5000
+    mySocket = socket.socket()
+    mySocket.bind((host,port))
+    mySocket.listen(1)
+    mySocket.settimeout(2)
+    while game_started == 0:
+        try:
+            conn, addr = mySocket.accept()      
+            id = addr[1]
+            print ("Connection from: " + str(addr)+ ". User's id will be " + str(id))
+            players[id] = conn
+            Thread(target=initialize_player, args=(id, players)).start()
+        except Exception as e:
+            continue
+    
+    game = Game(num_players, used_characters)
+
+    # convert keys in character_assignments to strings 
+    for key in character_assignments:
+        if key == 0:
+            character_assignments['mr_green'] = character_assignments.pop(0)
+        elif key == 1:
+            character_assignments['mrs_peacock'] = character_assignments.pop(1)
+        elif key == 2:
+            character_assignments['mrs_white'] = character_assignments.pop(2)
+        elif key == 3:
+            character_assignments['miss_scarlet'] = character_assignments.pop(3)    
+        elif key == 4:
+            character_assignments['professor_plum'] = character_assignments.pop(4)
+        elif key == 5:
+            character_assignments['colonel_mustard'] = character_assignments.pop(5)
+
+    # send clients their cards and who got how many cards
+    cards_dealt = str(num_players)+','
+    for piece in game.pieces:
+        if piece.cards != []:
+            cards_dealt = cards_dealt + ',' + str(len(piece.cards))
+    for character in character_assignments:
+        piece_index = get_piece(game, character)
+        piece = game.pieces[piece_index]
+        num_cards = str(len(piece.cards))
+        deck = ','.join(piece.cards)
+        message = cards_dealt + ',' + num_cards + ',' + deck
+        send_message(message, piece, character_assignments, players)
+
+    # can game just be passed like this? would it be better to create it in the main function?
+    return game, character_assignments, players
+
+# Function sends message to specified player(piece)
+def send_message(message, piece, character_assignments, players):
+    # message needs to be a string
+    id = character_assignments[piece.character]
+    conn = players[id]
+    data = message+"\r\n"
+    conn.send(data.encode())
+
+# Function sends message to all players(pieces)
+def broadcast_message(message, players):
+    # message needs to be a string
+    data = message+"\r\n"
+    for id, conn in players.items():
+        conn.send(data.encode())
+
+# Function waits for and retrieves a message from the player associated with piece
+def receive_message(piece, character_assignments, players):
+    id = character_assignments[piece.character]
+    conn = players[id]
+    data = conn.recv(1024).decode()
+    if data == '':
+        time.sleep(.5)
+        data = conn.recv(1024).decode()
+    # data should be a string. need to double check
+    return data
 
 # Function handles player's turn
-def startNextTurn(game, piece): 
-    #request move from player 
-    #waits for update                               
-    #updates game state/players
-    #broadcast update to everyone
+def handle_turn(game, piece, character_assignments, players, game_over, winner): 
+    # request move from player 
+    send_message("5,"+str(piece.was_just_moved_by_suggestn)+','+piece.position, piece, character_assignments, players)
+    turn = receive_message(piece, character_assignments, players)
 
-# Function ends the game
-def end_game(winner):
-    #how do we want to end the game?
-    #send everyone updates?  
+    while turn != "-1": # while move is not over
+        move = turn.split(',')
+        if move[0] == '2': # if player moved locations
+            piece.position = move[1] # make sure format matches that in components.py
+            broadcast_message("2,"+piece.character+","+move[1]) 
+        elif move[0] == '3': # if move was a suggestion
+            suggestion = move[1:]
+            handle_suggestion(suggestion, game, piece, character_assignments, players)
+        elif move[0] == '4':
+            accusation = move[1:]            
+            handle_accusation(accusation, game, piece, character_assignments, players, game_over, winner)
+        turn = receive_message(piece, character_assignments, players)
+
+    piece.was_just_moved_by_suggestn = 0
+
+# Function returns index of piece with specified character
+def get_piece(game, character):
+    for i in range(6):
+        piece = game.pieces[i]
+        if piece.character == character:
+            return i
+    print("ERROR: PIECE NOT FOUND. CHARACTER: "+character)
+    return -1
+
+# Function handles suggestions
+def handle_suggestion(suggestion, game, piece, character_assignments, players):
+    who = suggestion[0]
+    room = suggestion[1]
+    weapon = suggestion[2]
+
+    # if suggested piece is not already in that room, move them into it
+    who_piece = game.pieces[get_piece(game, who)] 
+    if who_piece.position != room:
+        who_piece.position = room
+        who_piece.was_just_moved_by_suggestn = 1
+        broadcast_message("22,"+who+","+room)
+    # see who can disprove the suggestion
+    was_disproved = 0
+    player_who_disproved = ""
+    card_used_to_disprove = ""
+    player_num = get_piece(game, piece.character)
+    # start from player's left
+    i = (player_num+1)%6
+    pieces = game.pieces
+    while i != player_num:
+        if who in pieces[i].cards:
+            was_disproved = 1
+            player_who_disproved = pieces[i].character
+            card_used_to_disprove = who
+            break
+        elif room in pieces[i].cards:
+            was_disproved = 1
+            player_who_disproved = pieces[i].character
+            card_used_to_disprove = room
+            break
+        elif weapon in pieces[i].cards:
+            was_disproved = 1
+            player_who_disproved = pieces[i].character
+            card_used_to_disprove = weapon
+            break
+        i = (i+1)%6
+    # broadcast the result
+    broadcast_message("3,"+piece.character+","+who+","+room+","+weapon+player_who_disproved)
+
+# Function handles accusations
+def handle_accusation(accusation, game, piece, character_assignments, players, game_over, winner):
+    # if accusation was wrong:
+    if set(game.answer) != set(accusation):
+        piece.has_guessed = 1
+        broadcast_message("4,"+piece.character+",0") 
+    # if accusation was correct:
+    else: 
+        game_over == 1
+        winner = piece.character 
+        broadcast_message("4,"+piece.character+",1")
 
 if __name__ == '__main__':
-    #set up waiting room
-    #wait for players to start game
-    #initialize game
+    game, character_assignments, players  = initialize_game()
     game_over = 0
+    winner = ""
     while game_over == 0:
         for piece in game.pieces: # pieces are already in order of play
             # skip pieces not in play or who have made a wrong accusation
             if piece.is_in_play==0 or piece.has_guessed==1:
                 continue
-            start_next_turn(game, piece)
-    end_game(player)
+            handle_turn(game, piece, character_assignments, players, game_over, winner)
+    #close all connections
+    for id in players:
+        conn = players[id]
+        conn.close()
+
+
