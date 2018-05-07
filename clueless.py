@@ -14,7 +14,8 @@ num_players = 0
 # Function runs as a separate thread
 def send_status(player, players):
     conn = players[player]
-    ##### what data should be sent? should client request a specific piece of data?
+    ##### what data will the client need?
+    ##### how to do this on the same socket as requesting moves/sending moves/sending updates without mixing up the messages?
 
 
 # Function handles game initialization for a single player
@@ -163,12 +164,12 @@ def handle_turn(game, piece, character_assignments, players, game_over, winner):
 
 # Function returns index of piece with specified character
 def get_piece(game, character):
-	for i in range(6):
-		piece = game.pieces[i]
-		if piece.character == character:
-			return i
+    for i in range(6):
+        piece = game.pieces[i]
+        if piece.character == character:
+            return i
     print("ERROR: PIECE NOT FOUND. CHARACTER: "+character)
-	return -1
+    return -1
 
 # Function handles suggestions
 def handle_suggestion(suggestion, game, piece, character_assignments, players):
@@ -176,25 +177,42 @@ def handle_suggestion(suggestion, game, piece, character_assignments, players):
     room = suggestion[1]
     weapon = suggestion[2]
 
+    # if suggested piece is not already in that room, move them into it
     who_piece = game.pieces[get_piece(game, who)] 
-
     if who_piece.position != room:
         who_piece.position = room
         who_piece.was_just_moved_by_suggestn = 1
         broadcast_message("22,"+who+","+room)
+    # see who can disprove the suggestion
     was_disproved = 0
-    player_who_disproved = -1
+    player_who_disproved = ""
     card_used_to_disprove = ""
-    #loop through players, starting at whoevers turn should be next and going in order of turns
-        #if that player can disprove the suggestion, change values of above 3 variables and break
-    #change player_who_disproved to be the character name
-    if was_disproved == 0:
-        broadcast_message("3,"+piece.character+","+who+","+room+","+weapon+"null")
-    else:
-        broadcast_message("3,"+piece.character+","+who+","+room+","+weapon+player_who_disproved)
+    player_num = get_piece(game, piece.character)
+    # start from player's left
+    i = (player_num+1)%6
+    pieces = game.pieces
+    while i != player_num:
+        if who in pieces[i].cards:
+            was_disproved = 1
+            player_who_disproved = pieces[i].character
+            card_used_to_disprove = who
+            break
+        elif room in pieces[i].cards:
+            was_disproved = 1
+            player_who_disproved = pieces[i].character
+            card_used_to_disprove = room
+            break
+        elif weapon in pieces[i].cards:
+            was_disproved = 1
+            player_who_disproved = pieces[i].character
+            card_used_to_disprove = weapon
+            break
+        i = (i+1)%6
+    # broadcast the result
+    broadcast_message("3,"+piece.character+","+who+","+room+","+weapon+player_who_disproved)
 
 # Function handles accusations
-def handle_accusation(accusation, game, piece, character_assignments, players, game_over, winner)
+def handle_accusation(accusation, game, piece, character_assignments, players, game_over, winner):
     # if accusation was wrong:
     if set(game.answer) != set(accusation):
         piece.has_guessed = 1
