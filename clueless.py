@@ -16,14 +16,17 @@ def initialize_player(id, players):
     conn  = players[id]
     # Process input from player until someone presses "Start Game"
     while game_started == 0:
+        print("still in waiting room. listening...")
         data = conn.recv(1024).decode()
         print ("data received: " + str(data) + " from player with id " + str(id))
         # data should either be an integer 0-5 indicating character selection/deselection or -1 indicating "start game"
         if data == '':
+            print("data was empty\n")
             continue
 
-        elif data == '-1': # If player pressed "Start Game"
+        elif data == -1: # If player pressed "Start Game"
             game_started = 1
+            print("game_started set to 1\n")
 
         # If player has already chosen their character, unassign it
         elif id in players_whove_selected:
@@ -31,7 +34,7 @@ def initialize_player(id, players):
             players_whove_selected.remove(id)
             character_assignments.pop(data)
             num_players = num_players-1
-            print("Sending confirmation of deselection  back to player")
+            print("Sending confirmation of deselection  back to player\n")
             data = "1\r\n"
             conn.send(data.encode())
         # If player hasnt chosen character yet and character is unused,
@@ -45,7 +48,7 @@ def initialize_player(id, players):
             print("player and character are paired\n")
             num_players = num_players+1
             print("player count increased\n")
-            print("Sending 1 back to player")
+            print("Sending 1 back to player\n")
             data = "1\r\n"
             conn.send(data.encode())
             print("data sent")
@@ -86,6 +89,7 @@ def initialize_game():
         except Exception as e:
             continue
     
+    print("creating game!\n ")
     game = Game(num_players, used_characters)
 
     # convert keys in character_assignments to strings 
