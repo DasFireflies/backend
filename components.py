@@ -43,6 +43,21 @@ class Game:
                 pieces.append(Piece(character, 0)) 
         self.pieces = pieces
 
+    def print(self):
+        print("Printing game...\n--------------------------------\n")
+        print("*Number of players: "+str(self.num_players)+"\n")
+        print("----------------------------------\n")
+        print("*Answer: ")
+        print(self.answer)
+        print("\n----------------------------------\n")
+        print("*Pieces:\n")
+        for piece in self.pieces:
+            piece.print()
+            print("----------------------------------\n")
+
+
+
+
 class Piece:
     # Function creates a game piece
     # This consists of: 
@@ -78,5 +93,17 @@ class Piece:
         self.cards = cards 
         self.has_guessed = 0 # whether or not the player has made an accusation
         self.was_just_moved_by_suggestn = 0
+
+    def print(self):
+        print("character = "+self.character+'\n')
+        print("color = "+self.color+'\n')
+        print('is_in_play = '+str(self.is_in_play)+'\n')
+        print("cards = ")
+        print(self.cards)
+        print('\n')
+        print("has_guessed = "+str(self.has_guessed)+'\n')
+        print("was_just_moved_by_suggestn = "+str(self.was_just_moved_by_suggestn)+'\n\n')
+
+
         
                          
