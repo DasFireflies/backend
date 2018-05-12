@@ -11,18 +11,6 @@ game_started = 0
 num_players = 0
 game_over = 0
 
-
-##########
-##### DATA READ IN IS STRINGS THROUGHOUT. DOUBLE CHECK IT IS USED THIS WAY THROUGHOUT THE CODE
-#
-#
-#
-#
-#
-#
-#
-#
-
 # Function handles game initialization for a single player
 def initialize_player(id, players):
     global used_characters, players_whove_selected, character_assignments, game_started, num_players
@@ -231,6 +219,7 @@ def handle_turn(game, piece, character_assignments, players, winner):
             print(accusation)
             print('\n')           
             handle_accusation(accusation, game, piece, character_assignments, players, winner)
+            break
         if game_over == 1:
             print('the game ended during their turn so their turn is over\n')
             break;
@@ -287,6 +276,7 @@ def handle_suggestion(suggestion, game, piece, character_assignments, players):
         i = (i+1)%6
     # broadcast the result
     print("the suggestion was disproved by player: " +player_who_disproved+" who used the card: "+card_used_to_disprove+'\n\n')
+    send_message("-3,"+was_disproved+","+player_who_disproved+","+card_used_to_disprove, piece, character_assignments, players) 
     broadcast_message("3,"+piece.character+","+who+","+room+","+weapon+','+player_who_disproved, players)
 
 # Function handles accusations
@@ -306,6 +296,7 @@ def handle_accusation(accusation, game, piece, character_assignments, players, w
 
 if __name__ == '__main__':
     global game_over
+    
     print("\n\n\nintializing game...\n\n\n")
     game, character_assignments, players  = initialize_game()
     game_over = 0
