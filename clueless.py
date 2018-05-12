@@ -157,7 +157,7 @@ def initialize_game():
         piece = game.pieces[piece_index]
         num_cards = str(len(piece.cards))
         deck = ','.join(piece.cards)
-        message = '9,'+cards_dealt + ',' + num_cards + ',' + deck
+        message = '9,'+cards_dealt + ',' + deck
         send_message(message, piece, character_assignments, players)
 
     print("\n*\n*\n*\n******done initializing game!!!!!!!!!!!*****\n*\n*\n*\n*")
