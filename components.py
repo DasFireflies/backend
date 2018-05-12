@@ -10,7 +10,7 @@ class Game:
 
         # Pick 3 cards from deck to be the answer
         character_cards = ['Lady Scarlet', 'General Mustard', 'Madam White', 'Baron Green', 'Lady Peacock', 'Dr. Plum']
-        room_cards = ['Study', 'Great Hall', 'lounge', 'Library', 'Billiard Room', 'Dining Room', 'Conservatory', 'Ballroom', 'Kitchen']
+        room_cards = ['Study', 'Great Hall', 'Lounge', 'Library', 'Billiard Room', 'Dining Room', 'Conservatory', 'Ballroom', 'Kitchen']
         weapon_cards = ['Rope', 'Lead Pipe', 'Knife', 'Wrench', 'Candlestick', 'Revolver']
         guilty_character = character_cards[random.randint(0,5)]
         guilty_room = room_cards[random.randint(0,8)]
@@ -56,6 +56,11 @@ class Game:
         print("\n----------------------------------\n")
         print("************************************")
 
+    def print_locations(self):
+        print("Printing piece locations...\n--------------------------------\n")
+        for piece in self.pieces:
+            piece.print_location()        
+
 
 
 
@@ -96,15 +101,16 @@ class Piece:
         self.was_just_moved_by_suggestn = 0
 
     def print(self):
-        print("character = "+self.character+'\n')
-        print("color = "+self.color+'\n')
-        print('is_in_play = '+str(self.is_in_play)+'\n')
+        print("character = "+self.character)
+        print("position = "+self.position)
+        print("color = "+self.color)
+        print('is_in_play = '+str(self.is_in_play))
         print("cards = ")
         print(self.cards)
-        print('\n')
-        print("has_guessed = "+str(self.has_guessed)+'\n')
-        print("was_just_moved_by_suggestn = "+str(self.was_just_moved_by_suggestn)+'\n\n')
+        print("has_guessed = "+str(self.has_guessed))
+        print("was_just_moved_by_suggestn = "+str(self.was_just_moved_by_suggestn)+'\n')
 
-
-        
+    def print_location(self):
+        print(self.character +": position = "+self.position)
+    
                          
