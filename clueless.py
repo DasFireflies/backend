@@ -9,7 +9,7 @@ players_whove_selected = []
 character_assignments = {} #dict of (character, player id) pairs
 game_started = 0
 num_players = 0
-game_over = 0
+#game_over = 0
 
 # Function handles game initialization for a single player
 def initialize_player(id, players):
@@ -19,7 +19,7 @@ def initialize_player(id, players):
     while game_started == 0:
         print("-----------------------------------")
         print("player with id "+str(id)+" is in waiting room. listening...")
-        data = conn.recv(1024).decode() #will this hang here for the users who didnt press start?
+        data = conn.recv(1024).decode() 
         if game_started == 1:
             break
         data = data[:-1] # remove \n character
@@ -27,7 +27,7 @@ def initialize_player(id, players):
         # data should either be an integer 0-5 indicating character selection/deselection or -1 indicating "start game"
         if data == '-1': # If player pressed "Start Game"
             game_started = 1
-            print("player #" + str(id) + "pressed start. game_started set to 1\n")
+            print("player # " + str(id) + "pressed start. game_started set to 1\n")
 
         # If player has already chosen their character, unassign it
         elif id in players_whove_selected:
@@ -61,7 +61,7 @@ def initialize_player(id, players):
             data = "0\r\n"
             conn.send(data.encode())
 
-        time.sleep(.5)
+        
 
 # Function handles game initialization
 # Accepts character selections and creates the playing pieces and game object
@@ -95,37 +95,37 @@ def initialize_game():
     # convert keys in character_assignments to strings 
     for key in character_assignments:
         if key == '0':
-            character_assignments['mr_green'] = character_assignments.pop('0')
+            character_assignments['Baron Green'] = character_assignments.pop('0')
         elif key == '1':
-            character_assignments['mrs_peacock'] = character_assignments.pop('1')
+            character_assignments['Lady Peacock'] = character_assignments.pop('1')
         elif key == '2':
-            character_assignments['mrs_white'] = character_assignments.pop('2')
+            character_assignments['Madam White'] = character_assignments.pop('2')
         elif key == '3':
-            character_assignments['miss_scarlet'] = character_assignments.pop('3')    
+            character_assignments['Lady Scarlet'] = character_assignments.pop('3')    
         elif key == '4':
-            character_assignments['professor_plum'] = character_assignments.pop('4')
+            character_assignments['Dr. Plum'] = character_assignments.pop('4')
         elif key == '5':
-            character_assignments['colonel_mustard'] = character_assignments.pop('5')
+            character_assignments['General Mustard'] = character_assignments.pop('5')
 
     # convert keys in character_assignments to strings 
     for character in used_characters:
         if character == '0':
-            used_characters.insert(0,'mr_green')
+            used_characters.insert(0,'Baron Green')
             used_characters.remove('0')
         elif character == '1':
-            used_characters.insert(0,'mrs_peacock')
+            used_characters.insert(0,'Lady Peacock')
             used_characters.remove('1')
         elif character == '2':
-            used_characters.insert(0,'mrs_white')
+            used_characters.insert(0,'Madam White')
             used_characters.remove('2')
         elif character == '3':
-            used_characters.insert(0,'miss_scarlet')
+            used_characters.insert(0,'Lady Scarlet')
             used_characters.remove('3')
         elif character == '4':
-            used_characters.insert(0,'professor_plum')
+            used_characters.insert(0,'Dr. Plum')
             used_characters.remove('4')
         elif character == '5':
-            used_characters.insert(0,'colonel_mustard')
+            used_characters.insert(0,'General Mustard')
             used_characters.remove('5')
         else:
             print("character was not replaced. character value = ")
@@ -142,25 +142,23 @@ def initialize_game():
     game = Game(num_players, used_characters)
     game.print()
 
-    print("sending players the card data\n")
+    print("sending clients game started signal")
+    broadcast_message("gamestarted",players)
+
+    time.sleep(.5)
+    print("sending players the card data...\n")
     # send clients their cards and who got how many cards
     cards_dealt = str(num_players)
     for piece in game.pieces:
         if piece.cards != []:
             cards_dealt = cards_dealt + ',' + str(len(piece.cards))
     for character in character_assignments:
-        print("character = "+character)
         piece_index = get_piece(game, character)
-        print("\npiece's index = "+str(piece_index))
         piece = game.pieces[piece_index]
         num_cards = str(len(piece.cards))
-        print("\n number of cards = "+num_cards)
         deck = ','.join(piece.cards)
-        print("\n deck = "+ deck)
         message = cards_dealt + ',' + num_cards + ',' + deck
-        print("\n sending message: "+message)
         send_message(message, piece, character_assignments, players)
-        print("\nsent player with character "+character+" the following card data: "+message+"\n\n")
 
     print("\n*\n*\n*\n******done initializing game!!!!!!!!!!!*****\n*\n*\n*\n*")
     # can game just be passed like this? would it be better to create it in the main function?
@@ -194,8 +192,8 @@ def receive_message(piece, character_assignments, players):
     return data
 
 # Function handles player's turn
-def handle_turn(game, piece, character_assignments, players, winner): 
-    global game_over
+def handle_turn(game, piece, character_assignments, players, winner,game_over): 
+    
     # request move from player 
     send_message("5,"+str(piece.was_just_moved_by_suggestn)+','+piece.position, piece, character_assignments, players)
     turn = receive_message(piece, character_assignments, players)
@@ -218,7 +216,7 @@ def handle_turn(game, piece, character_assignments, players, winner):
             print("player made an accusation: ")
             print(accusation)
             print('\n')           
-            handle_accusation(accusation, game, piece, character_assignments, players, winner)
+            game_over=handle_accusation(accusation, game, piece, character_assignments, players, winner, game_over)
             break
         if game_over == 1:
             print('the game ended during their turn so their turn is over\n')
@@ -226,6 +224,7 @@ def handle_turn(game, piece, character_assignments, players, winner):
         turn = receive_message(piece, character_assignments, players)
 
     piece.was_just_moved_by_suggestn = 0
+    return game_over
 
 # Function returns index of piece with specified character
 def get_piece(game, character):
@@ -276,12 +275,11 @@ def handle_suggestion(suggestion, game, piece, character_assignments, players):
         i = (i+1)%6
     # broadcast the result
     print("the suggestion was disproved by player: " +player_who_disproved+" who used the card: "+card_used_to_disprove+'\n\n')
-    send_message("-3,"+was_disproved+","+player_who_disproved+","+card_used_to_disprove, piece, character_assignments, players) 
+    send_message("-3,"+str(was_disproved)+","+player_who_disproved+","+card_used_to_disprove, piece, character_assignments, players) 
     broadcast_message("3,"+piece.character+","+who+","+room+","+weapon+','+player_who_disproved, players)
 
 # Function handles accusations
-def handle_accusation(accusation, game, piece, character_assignments, players, winner):
-    global game_over
+def handle_accusation(accusation, game, piece, character_assignments, players, winner, game_over):
     # if accusation was wrong:
     if set(game.answer) != set(accusation):
         piece.has_guessed = 1
@@ -293,10 +291,11 @@ def handle_accusation(accusation, game, piece, character_assignments, players, w
         winner = piece.character 
         broadcast_message("4,"+piece.character+",1", players)
         print('correct accusation!\n')
+    return game_over
 
 if __name__ == '__main__':
-    global game_over
-    
+    #global game_over
+
     print("\n\n\nintializing game...\n\n\n")
     game, character_assignments, players  = initialize_game()
     game_over = 0
@@ -306,6 +305,8 @@ if __name__ == '__main__':
         pieces_without_turns = 0
         for piece in game.pieces: # pieces are already in order of play
             # skip pieces not in play or who have made a wrong accusation
+            if game_over == 1:
+                break
             if piece.is_in_play==0 or piece.has_guessed==1:
                 pieces_without_turns = pieces_without_turns+1
                 if pieces_without_turns == 6:
@@ -315,7 +316,7 @@ if __name__ == '__main__':
                     break
                 continue
             print("\n\n beginning turn for player "+piece.character+"...\n\n")
-            handle_turn(game, piece, character_assignments, players, winner)
+            game_over=handle_turn(game, piece, character_assignments, players, winner, game_over)
     print("\n\ngame over, closing connections\n\n")
     #close all connections
     for id in players:
