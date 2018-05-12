@@ -289,7 +289,7 @@ def handle_accusation(accusation, game, piece, character_assignments, players, w
     else: 
         game_over = 1 ##see if this actually changes game_over value
         winner = piece.character 
-        broadcast_message("4,"+piece.character+",1", players)
+        broadcast_message("4,"+piece.character+",1," + accusation[0]+","+accusation[1]+","+accusation[2], players)
         print('correct accusation!\n')
     return game_over
 
