@@ -10,16 +10,18 @@ def Main():
 
     mySocket.listen(1)
     conn, addr = mySocket.accept()
+    print("executing line after mySocket.accept()")
     print ("Connection from: " + str(addr))
 
-    #receiving data
-    data = conn.recv(1024).decode()
-    print ("from connected  user: " + str(data))
+    while True  :
+        #receiving data
+        data = conn.recv(1024).decode()
+        print ("from connected  user: " + str(data))
 
-    #sending data
-    print("Sending string...")
-    data = "Server says hi!\r\n"
-    conn.send(data.encode())
+        #sending data
+        print("Sending string...")
+        data = "Server says hi!\r\n"
+        conn.send(data.encode())
 
     conn.close()
 
