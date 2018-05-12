@@ -301,6 +301,7 @@ if __name__ == '__main__':
     game_over = 0
     winner = ""
     print("\nbeginning game loop....\n\n\n")
+    time.sleep(5)
     while game_over == 0:
         pieces_without_turns = 0
         for piece in game.pieces: # pieces are already in order of play
