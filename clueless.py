@@ -316,10 +316,10 @@ if __name__ == '__main__':
                     game_over = 1
                     break
                 continue
-            print("\n-------------------------------------\n")
-            print("everyone's locations:")
+            print("-------------------------------------")
             game.print_locations()
-            print("beginning turn for player "+piece.character+"...\n")
+            print("\n-------------------------------------")
+            print("\nbeginning turn for player "+piece.character+"...\n")
             game_over=handle_turn(game, piece, character_assignments, players, winner, game_over)
     print("\n\ngame over, closing connections\n\n")
     #close all connections

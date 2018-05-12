@@ -111,6 +111,6 @@ class Piece:
         print("was_just_moved_by_suggestn = "+str(self.was_just_moved_by_suggestn)+'\n')
 
     def print_location(self):
-        print(self.character +": position = "+self.position)
+        print(self.character +": = "+self.position)
     
                          
