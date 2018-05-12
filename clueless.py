@@ -274,9 +274,9 @@ def handle_suggestion(suggestion, game, piece, character_assignments, players):
             break
         i = (i+1)%6
     # broadcast the result
-    print("the suggestion was disproved by player: " +player_who_disproved+" who used the card: "+card_used_to_disprove+'\n\n')
     send_message("-3,"+str(was_disproved)+","+player_who_disproved+","+card_used_to_disprove, piece, character_assignments, players) 
     broadcast_message("3,"+piece.character+","+who+","+room+","+weapon+','+player_who_disproved, players)
+    print("the suggestion was disproved by player: " +player_who_disproved+" who used the card: "+card_used_to_disprove+'\n\n')
 
 # Function handles accusations
 def handle_accusation(accusation, game, piece, character_assignments, players, winner, game_over):
